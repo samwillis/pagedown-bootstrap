@@ -65,6 +65,11 @@
      // - refreshPreview() forces the preview to be updated. This method is only available after run() was called.
     Markdown.Editor = function (markdownConverter, idPostfix, buttons) {
 
+		if (typeof(idPostfix) === "object") {
+			buttons = idPostfix;
+			idPostfix = null;
+		}
+		
         idPostfix = idPostfix || "";
 
         var hooks = this.hooks = new Markdown.HookCollection();
