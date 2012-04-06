@@ -92,7 +92,8 @@ http://google.com
 
 http://stackoverflow.com
 
-It also includes a help button.
+It also includes a help button, and the `code` button has been removed using 
+the new button configuration features.
 </textarea>
         </div>
         <div id="wmd-preview-second" class="wmd-panel wmd-preview"></div>
@@ -115,9 +116,17 @@ It also includes a help button.
                 return "This is a link to " + url.replace(/^https?:\/\//, "");
             });
             
-            var help = function () { alert("Do you need help?"); }
-            
-            var editor2 = new Markdown.Editor(converter2, "-second", { handler: help });
+            var help = function () { alert("You'd better get some help!"); }
+            // get default button configuration
+            var buttons = Markdown.Editor.getDefaultButtons();
+			
+			// add help button, specifying our handler and custom title
+			buttons.help = Markdown.Editor.MakeHelpButton(help, "Do you need help?");
+			// remove the code button - any of the other buttons can be removed as well, which will
+            // cause that button's functionality to no longer be available
+            delete buttons.code;
+			
+			var editor2 = new Markdown.Editor(converter2, "-second", buttons);			
             
             editor2.run();
         })();
