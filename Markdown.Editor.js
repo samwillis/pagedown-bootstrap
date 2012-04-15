@@ -41,16 +41,35 @@
     //  END OF YOUR CHANGES
     // -------------------------------------------------------------------
 
-    // help, if given, should have a property "handler", the click handler for the help button,
-    // and can have an optional property "title" for the button's tooltip (defaults to "Markdown Editing Help").
-    // If help isn't given, not help button is created.
+	// The buttons parameter allows configuring which buttons appear
+    // See Markdown.Editor.getDefaultButtons() for the format of the buttons parameter. Buttons
+    // can be removed by acquiring the default buttons object and deleting the appropriate button
+    // properties before passing the object here. Moving spacers and pointing to different sprites
+    // can also be accomplished by changing properties in the button object.
     //
-    // The constructed editor object has the methods:
-    // - getConverter() returns the markdown converter object that was passed to the constructor
-    // - run() actually starts the editor; should be called after all necessary plugins are registered. Calling this more than once is a no-op.
-    // - refreshPreview() forces the preview to be updated. This method is only available after run() was called.
-    Markdown.Editor = function (markdownConverter, idPostfix, help) {
+    // A help button is not displayed by default to preserve previous functionality. To include a help
+    // button, add a "help" property to the buttons object using Markdown.Editor.MakeHelpButton(), passing
+    // the onClick handler and optional title. Title defaults to "Markdown Editing Help".
+    
+    // The previous method for specifying a help button continues to be supported, so this class
+    // remains completely backward compatible.
+    // 
+    // The "old" method for specifying a help button:
+    //   help, if given, should have a property "handler", the click handler for the help button,
+    //   and can have an optional property "title" for the button's tooltip (defaults to "Markdown Editing Help").
+    //   If help isn't given, no help button is created.
+     //
+     // The constructed editor object has the methods:
+     // - getConverter() returns the markdown converter object that was passed to the constructor
+     // - run() actually starts the editor; should be called after all necessary plugins are registered. Calling this more than once is a no-op.
+     // - refreshPreview() forces the preview to be updated. This method is only available after run() was called.
+    Markdown.Editor = function (markdownConverter, idPostfix, buttons) {
 
+		if (typeof(idPostfix) === "object") {
+			buttons = idPostfix;
+			idPostfix = null;
+		}
+		
         idPostfix = idPostfix || "";
 
         var hooks = this.hooks = new Markdown.HookCollection();
@@ -88,7 +107,7 @@
                 }
             }
 
-            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help);
+            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, buttons);
             uiManager.setUndoRedoButtonStates();
 
             var forceRefresh = that.refreshPreview = function () { previewManager.refresh(true); };
@@ -1135,11 +1154,27 @@
         }, 0);
     };
 
-    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions) {
+    function UIManager(postfix, panels, undoManager, previewManager, commandManager, buttonOptions) {
 
         var inputBox = panels.input,
             buttons = {}; // buttons.undo, buttons.link, etc. The actual DOM elements.
-
+		
+		// if no button options passed then set up defaults
+        if (!buttonOptions)
+        {
+          buttonOptions = Markdown.Editor.getDefaultButtons();
+        } 
+        // convert old style "help" parameter format to remain backward compatible - i.e. { handler: x, title:"x" }
+        else if (buttonOptions.handler)
+        {
+            var help = buttonOptions;
+            buttonOptions = Markdown.Editor.getDefaultButtons();
+            buttonOptions.help = Markdown.Editor.getDefaultHelpButton();
+            buttonOptions.help.handler = help.handler;
+            if (help.title)
+              buttonOptions.help.title = help.title;
+        }
+		
         makeSpritedButtonRow();
 
         var keyEvent = "keydown";
@@ -1238,7 +1273,9 @@
 
         // Perform the button's action.
         function doClick(button) {
-
+			
+			if (!button) return;
+			
             inputBox.focus();
 
             if (button.textOp) {
@@ -1331,14 +1368,15 @@
             buttonRow.className = 'btn-toolbar';
             buttonRow = buttonBar.appendChild(buttonRow);
 
-            var makeButton = function (id, title, icon, textOp, group) {
+			var makeButton = function (options, textOp, group) {
+				if (!options) return null;
                 var button = document.createElement("button");
                 button.className = "btn";
                 var buttonImage = document.createElement("i");
-                buttonImage.className = icon;
-                button.id = id + postfix;
+                buttonImage.className = options.icon;
+                button.id = options.id + postfix;
                 button.appendChild(buttonImage);
-                button.title = title;
+                button.title = options.title;
                 $(button).tooltip({placement: 'bottom'})
                 if (textOp)
                     button.textOp = textOp;
@@ -1359,53 +1397,54 @@
             }
 
             group1 = makeGroup(1);
-            buttons.bold = makeButton("wmd-bold-button", "Bold - Ctrl+B", "icon-bold", bindCommand("doBold"), group1);
-            buttons.italic = makeButton("wmd-italic-button", "Italic - Ctrl+I", "icon-italic", bindCommand("doItalic"), group1);
+            buttons.bold = makeButton(buttonOptions.bold, bindCommand("doBold"), group1);
+            buttons.italic = makeButton(buttonOptions.italic, bindCommand("doItalic"), group1);
             
             group2 = makeGroup(2);
-            buttons.link = makeButton("wmd-link-button", "Link - Ctrl+L", "icon-link", bindCommand(function (chunk, postProcessing) {
+            buttons.link = makeButton(buttonOptions.link, bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, false);
             }), group2);
-            buttons.quote = makeButton("wmd-quote-button", "Blockquote - Ctrl+Q", "icon-blockquote", bindCommand("doBlockquote"), group2);
-            buttons.code = makeButton("wmd-code-button", "Code Sample - Ctrl+K", "icon-code", bindCommand("doCode"), group2);
-            buttons.image = makeButton("wmd-image-button", "Image - Ctrl+G", "icon-picture", bindCommand(function (chunk, postProcessing) {
+            buttons.quote = makeButton(buttonOptions.quote, bindCommand("doBlockquote"), group2);
+            buttons.code = makeButton(buttonOptions.code, bindCommand("doCode"), group2);
+            buttons.image = makeButton(buttonOptions.image, bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, true);
             }), group2);
 
             group3 = makeGroup(3);
-            buttons.olist = makeButton("wmd-olist-button", "Numbered List - Ctrl+O", "icon-list", bindCommand(function (chunk, postProcessing) {
+            buttons.olist = makeButton(buttonOptions.olist, bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, true);
             }), group3);
-            buttons.ulist = makeButton("wmd-ulist-button", "Bulleted List - Ctrl+U", "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
+            buttons.ulist = makeButton(buttonOptions.ulist, bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, false);
             }), group3);
-            buttons.heading = makeButton("wmd-heading-button", "Heading - Ctrl+H", "icon-header", bindCommand("doHeading"), group3);
-            buttons.hr = makeButton("wmd-hr-button", "Horizontal Rule - Ctrl+R", "icon-hr-line", bindCommand("doHorizontalRule"), group3);
+            buttons.heading = makeButton(buttonOptions.heading, bindCommand("doHeading"), group3);
+            buttons.hr = makeButton(buttonOptions.hr, bindCommand("doHorizontalRule"), group3);
             
             group4 = makeGroup(4);
-            buttons.undo = makeButton("wmd-undo-button", "Undo - Ctrl+Z", "icon-undo", null, group4);
-            buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
+            buttons.undo = makeButton(buttonOptions.undo, null, group4);
+			if (buttons.undo)
+				buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
 
-            var redoTitle = /win/.test(nav.platform.toLowerCase()) ?
-                "Redo - Ctrl+Y" :
-                "Redo - Ctrl+Shift+Z"; // mac and other non-Windows platforms
+            buttons.redo = makeButton(buttonOptions.redo, null, group4);
+			if (buttons.redo)
+				buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
 
-            buttons.redo = makeButton("wmd-redo-button", redoTitle, "icon-share-alt", null, group4);
-            buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
-
-            if (helpOptions) {
+            if (buttonOptions.help) {
                 group5 = makeGroup(5);
                 group5.className = group5.className + " pull-right";
+				
                 var helpButton = document.createElement("button");
-                var helpButtonImage = document.createElement("i");
+                helpButton.className = "btn";
+				helpButton.id = buttonOptions.help.id + postfix;
+				
+				var helpButtonImage = document.createElement("i");
                 helpButtonImage.className = "icon-question-sign";
                 helpButton.appendChild(helpButtonImage);
-                helpButton.className = "btn";
-                helpButton.id = "wmd-help-button" + postfix;
+                
                 helpButton.isHelp = true;
-                helpButton.title = helpOptions.title || defaultHelpHoverTitle;
+                helpButton.title = buttonOptions.help.title;
                 $(helpButton).tooltip({placement: 'bottom'})
-                helpButton.onclick = helpOptions.handler;
+                helpButton.onclick = buttonOptions.help.handler;
 
                 setupButton(helpButton, true);
                 group5.appendChild(helpButton);
@@ -2105,6 +2144,49 @@
         chunk.selection = "";
         chunk.skipLines(2, 1, true);
     }
+	
+	Markdown.Editor.getDefaultButtons = function() {
+        var result = {
+                bold: { id: "wmd-bold-button", title: "Strong <strong> Ctrl+B", icon: "icon-bold" },
+                italic: { id: "wmd-italic-button", title: "Emphasis <em> Ctrl+I", icon: "icon-italic" },
+                link: { id: "wmd-link-button", title: "Hyperlink <a> Ctrl+L", icon: "icon-link" },
+                quote: { id: "wmd-quote-button", title: "Blockquote <blockquote> Ctrl+Q", icon: "icon-blockquote" },
+                code: { id: "wmd-code-button", title: "Code Sample <pre><code> Ctrl+K", icon: "icon-code" },
+                image: { id: "wmd-image-button", title: "Image <img> Ctrl+G", icon: "icon-picture" },
+                olist: { id: "wmd-olist-button", title: "Numbered List <ol> Ctrl+O", icon: "icon-list" },
+                ulist: { id: "wmd-ulist-button", title: "Bulleted List <ul> Ctrl+U", icon: "icon-bullet-list" },
+                heading: { id: "wmd-heading-button", title: "Heading <h1>/<h2> Ctrl+H", icon: "icon-header" },
+                hr: { id: "wmd-hr-button", title: "Horizontal Rule <hr> Ctrl+R", icon: "icon-hr-line" },
+                undo: { id: "wmd-undo-button", title: "Undo - Ctrl+Z", icon: "icon-undo" },
+                redo: { id: "wmd-redo-button", 
+                        title: /win/.test(nav.platform.toLowerCase()) ? "Redo - Ctrl+Y" : "Redo - Ctrl+Shift+Z" /* mac and other non-Windows platforms*/, icon: "icon-share-alt" }
+            };
+            
+        return result;
+    }
 
+    Markdown.Editor.getDefaultHelpButton = function() {
+    
+        var result =
+          {
+              id: "wmd-help-button",
+              title: defaultHelpHoverTitle,
+              isHelp: true
+          }
+          
+       return result;
+    }
+        
+    Markdown.Editor.MakeHelpButton = function(handler, title) {
+      button = Markdown.Editor.getDefaultHelpButton();
+
+      if (handler)
+          button.handler = handler;
+          
+      if (title)
+          button.title = title;
+      
+      return button;
+    }
 
 })();
