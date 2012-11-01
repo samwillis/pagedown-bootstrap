@@ -1,0 +1,7 @@
+{
+  "name": "cv",
+  "version": "0.0.0",
+  "dependencies": {
+    "bootstrap": "git://github.com/twitter/bootstrap.git#v2.1.1"
+  }
+}
