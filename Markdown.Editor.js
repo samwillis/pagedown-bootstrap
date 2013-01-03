@@ -1011,7 +1011,7 @@
                     text = 'http://' + text;
             }
 
-            $(dialog).modal('hide');
+            jQuery(dialog).modal('hide');
 
             callback(text);
             return false;
@@ -1122,15 +1122,15 @@
                 range.select();
             }
             
-            $(dialog).on('shown', function () {
+            jQuery(dialog).on('shown', function () {
                 input.focus();
             })
             
-            $(dialog).on('hidden', function () {
+            jQuery(dialog).on('hidden', function () {
                 dialog.parentNode.removeChild(dialog);
             })
 
-            $(dialog).modal()
+            jQuery(dialog).modal()
 
         }, 0);
     };
@@ -1314,6 +1314,7 @@
             }
             else {
                 button.disabled = true;
+                jQuery(button).tooltip('hide');
             }
         }
 
@@ -1339,7 +1340,7 @@
                 button.id = id + postfix;
                 button.appendChild(buttonImage);
                 button.title = title;
-                $(button).tooltip({placement: 'bottom'})
+                jQuery(button).tooltip({placement: 'bottom'})
                 if (textOp)
                     button.textOp = textOp;
                 setupButton(button, true);
@@ -1363,14 +1364,16 @@
             buttons.italic = makeButton("wmd-italic-button", "Italic - Ctrl+I", "icon-italic", bindCommand("doItalic"), group1);
             
             group2 = makeGroup(2);
-            buttons.link = makeButton("wmd-link-button", "Link - Ctrl+L", "icon-link", bindCommand(function (chunk, postProcessing) {
-                return this.doLinkOrImage(chunk, postProcessing, false);
-            }), group2);
+            // insert link
+//            buttons.link = makeButton("wmd-link-button", "Link - Ctrl+L", "icon-link", bindCommand(function (chunk, postProcessing) {
+//                return this.doLinkOrImage(chunk, postProcessing, false);
+//            }), group2);
             buttons.quote = makeButton("wmd-quote-button", "Blockquote - Ctrl+Q", "icon-blockquote", bindCommand("doBlockquote"), group2);
             buttons.code = makeButton("wmd-code-button", "Code Sample - Ctrl+K", "icon-code", bindCommand("doCode"), group2);
-            buttons.image = makeButton("wmd-image-button", "Image - Ctrl+G", "icon-picture", bindCommand(function (chunk, postProcessing) {
-                return this.doLinkOrImage(chunk, postProcessing, true);
-            }), group2);
+            // insert image
+//            buttons.image = makeButton("wmd-image-button", "Image - Ctrl+G", "icon-picture", bindCommand(function (chunk, postProcessing) {
+//                return this.doLinkOrImage(chunk, postProcessing, true);
+//            }), group2);
 
             group3 = makeGroup(3);
             buttons.olist = makeButton("wmd-olist-button", "Numbered List - Ctrl+O", "icon-list", bindCommand(function (chunk, postProcessing) {
@@ -1404,7 +1407,7 @@
                 helpButton.id = "wmd-help-button" + postfix;
                 helpButton.isHelp = true;
                 helpButton.title = helpOptions.title || defaultHelpHoverTitle;
-                $(helpButton).tooltip({placement: 'bottom'})
+                jQuery(helpButton).tooltip({placement: 'bottom'})
                 helpButton.onclick = helpOptions.handler;
 
                 setupButton(helpButton, true);
