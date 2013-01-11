@@ -49,10 +49,50 @@
     // - getConverter() returns the markdown converter object that was passed to the constructor
     // - run() actually starts the editor; should be called after all necessary plugins are registered. Calling this more than once is a no-op.
     // - refreshPreview() forces the preview to be updated. This method is only available after run() was called.
-    Markdown.Editor = function (markdownConverter, idPostfix, help) {
+    $.fn.markdown_editor = function ( option ) {
+        var args = Array.apply(null, arguments);
+        args.shift();
+        return this.each(function () {
+            var $this = $(this),
+            data = $this.data('datepicker'),
+            options = typeof option == 'object' && option;
+            if (!data) {
+                $this.data('datepicker', (data = new Datepicker(this, $.extend({}, $.fn.datepicker.defaults,options))));
+            }
+            if (typeof option == 'string' && typeof data[option] == 'function') {
+                data[option].apply(data, args);
+            }
+        });
+    };
+    $.fn.markdown_editor.defaults = {
+    };
+
+    $.fn.markdown_editor.Constructor = Markdown.Editor;
+
+    var tooltips = $.fn.markdown_editor.tooltips = {
+        en: {
+            bold: 'Bold - Ctrl+B',
+            italic: 'Italic - Ctrl+I',
+            link: 'Link - Ctrl+L',
+            quote: 'Blockquote - Ctrl+Q',
+            code: 'Code Sample - Ctrl+K',
+            image: 'Image - Ctrl+G',
+            olist: 'Numbered List - Ctrl+O',
+            ulist: 'Bulleted List - Ctrl+U',
+            heading: 'Heading - Ctrl+H',
+            hr: 'Horizontal Rule - Ctrl+R',
+            undo: 'Undo - Ctrl+Z',
+            redo_pc: 'Redo - Ctrl+Y',
+            redo_mac: 'Redo - Ctrl+Shift+Z' 
+        }
+    }; 
+
+
+    Markdown.Editor = function (markdownConverter, idPostfix, help, language) {
 
         idPostfix = idPostfix || "";
-
+        this.language = language != undefined ? language : "en";
+        this.language = this.language in tooltips ? this.language : "en";
         var hooks = this.hooks = new Markdown.HookCollection();
         hooks.addNoop("onPreviewRefresh");       // called with no arguments after the preview has been refreshed
         hooks.addNoop("postBlockquoteCreation"); // called with the user's selection *after* the blockquote was created; should return the actual to-be-inserted text
@@ -88,7 +128,7 @@
                 }
             }
 
-            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help);
+            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help, this.language);
             uiManager.setUndoRedoButtonStates();
 
             var forceRefresh = that.refreshPreview = function () { previewManager.refresh(true); };
@@ -1135,8 +1175,8 @@
         }, 0);
     };
 
-    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions) {
-
+    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions, language) {
+        
         var inputBox = panels.input,
             buttons = {}; // buttons.undo, buttons.link, etc. The actual DOM elements.
 
@@ -1359,36 +1399,37 @@
             }
 
             group1 = makeGroup(1);
-            buttons.bold = makeButton("wmd-bold-button", "Bold - Ctrl+B", "icon-bold", bindCommand("doBold"), group1);
-            buttons.italic = makeButton("wmd-italic-button", "Italic - Ctrl+I", "icon-italic", bindCommand("doItalic"), group1);
+            local_tooltips = tooltips[language];
+            buttons.bold = makeButton("wmd-bold-button", local_tooltips.bold, "icon-bold", bindCommand("doBold"), group1);
+            buttons.italic = makeButton("wmd-italic-button", local_tooltips.italic, "icon-italic", bindCommand("doItalic"), group1);
             
             group2 = makeGroup(2);
-            buttons.link = makeButton("wmd-link-button", "Link - Ctrl+L", "icon-link", bindCommand(function (chunk, postProcessing) {
+            buttons.link = makeButton("wmd-link-button", local_tooltips.link, "icon-link", bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, false);
             }), group2);
-            buttons.quote = makeButton("wmd-quote-button", "Blockquote - Ctrl+Q", "icon-blockquote", bindCommand("doBlockquote"), group2);
-            buttons.code = makeButton("wmd-code-button", "Code Sample - Ctrl+K", "icon-code", bindCommand("doCode"), group2);
-            buttons.image = makeButton("wmd-image-button", "Image - Ctrl+G", "icon-picture", bindCommand(function (chunk, postProcessing) {
+            buttons.quote = makeButton("wmd-quote-button", local_tooltips.quote, "icon-blockquote", bindCommand("doBlockquote"), group2);
+            buttons.code = makeButton("wmd-code-button", local_tooltips.code, "icon-code", bindCommand("doCode"), group2);
+            buttons.image = makeButton("wmd-image-button", local_tooltips.image, "icon-picture", bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, true);
             }), group2);
 
             group3 = makeGroup(3);
-            buttons.olist = makeButton("wmd-olist-button", "Numbered List - Ctrl+O", "icon-list", bindCommand(function (chunk, postProcessing) {
+            buttons.olist = makeButton("wmd-olist-button", local_tooltips.olist, "icon-list", bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, true);
             }), group3);
-            buttons.ulist = makeButton("wmd-ulist-button", "Bulleted List - Ctrl+U", "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
+            buttons.ulist = makeButton("wmd-ulist-button", local_tooltips.ulist, "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, false);
             }), group3);
-            buttons.heading = makeButton("wmd-heading-button", "Heading - Ctrl+H", "icon-header", bindCommand("doHeading"), group3);
-            buttons.hr = makeButton("wmd-hr-button", "Horizontal Rule - Ctrl+R", "icon-hr-line", bindCommand("doHorizontalRule"), group3);
+            buttons.heading = makeButton("wmd-heading-button", local_tooltips.heading, "icon-header", bindCommand("doHeading"), group3);
+            buttons.hr = makeButton("wmd-hr-button", local_tooltips.hr, "icon-hr-line", bindCommand("doHorizontalRule"), group3);
             
             group4 = makeGroup(4);
-            buttons.undo = makeButton("wmd-undo-button", "Undo - Ctrl+Z", "icon-undo", null, group4);
+            buttons.undo = makeButton("wmd-undo-button", local_tooltips.undo, "icon-undo", null, group4);
             buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
 
             var redoTitle = /win/.test(nav.platform.toLowerCase()) ?
-                "Redo - Ctrl+Y" :
-                "Redo - Ctrl+Shift+Z"; // mac and other non-Windows platforms
+                local_tooltips.redo_pc :
+                local_tooltips.redo_mac; // mac and other non-Windows platforms
 
             buttons.redo = makeButton("wmd-redo-button", redoTitle, "icon-share-alt", null, group4);
             buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
