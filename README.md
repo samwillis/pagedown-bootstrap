@@ -1,7 +1,12 @@
 PageDown-Bootstrap
 ==================
 
-This is a fork of http://code.google.com/p/pagedown/ changed to use Twitter Bootstrap for styling the editor and modal popups.
+This is a fork of https://github.com/samwillis/pagedown-bootstrap to add i18n support
+
+Currently the tooltips on editor toolbar are supporting i18n, just simply add a file similar to i18n/Markdown.i18n.zh_CN.js
+, it should work fine.
+
+The solution of adding i18n support is inspired by https://github.com/eternicode/bootstrap-datepicker, :)
 
 The demo is viewable here: http://samwillis.co.uk/pagedown-bootstrap/demo/browser/demo.html
 
