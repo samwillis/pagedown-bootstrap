@@ -25,11 +25,6 @@
     // this area.
     // -------------------------------------------------------------------
 
-    // The text that appears on the upper part of the dialog box when
-    // entering links.
-    var linkDialogText = "<p>http://example.com/ \"optional title\"</p>";
-    var imageDialogText = "<p>http://example.com/images/diagram.jpg \"optional title\"</p>";
-
     // The default text that appears in the dialog input box when entering
     // links.
     var imageDefaultText = "http://";
@@ -69,21 +64,35 @@
 
     $.fn.markdown_editor.Constructor = Markdown.Editor;
 
-    var tooltips = $.fn.markdown_editor.tooltips = {
+    var translations = $.fn.markdown_editor.translations = {
         en: {
-            bold: 'Bold - Ctrl+B',
-            italic: 'Italic - Ctrl+I',
-            link: 'Link - Ctrl+L',
-            quote: 'Blockquote - Ctrl+Q',
-            code: 'Code Sample - Ctrl+K',
-            image: 'Image - Ctrl+G',
-            olist: 'Numbered List - Ctrl+O',
-            ulist: 'Bulleted List - Ctrl+U',
-            heading: 'Heading - Ctrl+H',
-            hr: 'Horizontal Rule - Ctrl+R',
-            undo: 'Undo - Ctrl+Z',
-            redo_pc: 'Redo - Ctrl+Y',
-            redo_mac: 'Redo - Ctrl+Shift+Z' 
+            tooltips: {
+                bold: 'Bold - Ctrl+B',
+                italic: 'Italic - Ctrl+I',
+                link: 'Link - Ctrl+L',
+                quote: 'Blockquote - Ctrl+Q',
+                code: 'Code Sample - Ctrl+K',
+                image: 'Image - Ctrl+G',
+                olist: 'Numbered List - Ctrl+O',
+                ulist: 'Bulleted List - Ctrl+U',
+                heading: 'Heading - Ctrl+H',
+                hr: 'Horizontal Rule - Ctrl+R',
+                undo: 'Undo - Ctrl+Z',
+                redo_pc: 'Redo - Ctrl+Y',
+                redo_mac: 'Redo - Ctrl+Shift+Z' 
+            },
+            dialog_text: {
+                link_title: "Insert Link",
+                link_example: "<p>http://example.com/ \"optional title\"</p>",
+                link_description: "enter link description here" ,
+                image_title: "Insert Image",
+                image_example: "<p>http://example.com/images/diagram.jpg \"optional title\"</p>",
+                image_description: "enter image description here" ,
+            },
+            button_text: {
+                ok: "OK",
+                cancel: "Cancel"
+            }
         }
     }; 
 
@@ -92,7 +101,7 @@
 
         idPostfix = idPostfix || "";
         this.language = language != undefined ? language : "en";
-        this.language = this.language in tooltips ? this.language : "en";
+        this.language = this.language in translations ? this.language : "en";
         var hooks = this.hooks = new Markdown.HookCollection();
         hooks.addNoop("onPreviewRefresh");       // called with no arguments after the preview has been refreshed
         hooks.addNoop("postBlockquoteCreation"); // called with the user's selection *after* the blockquote was created; should return the actual to-be-inserted text
@@ -1013,12 +1022,13 @@
     // callback: The function which is executed when the prompt is dismissed, either via OK or Cancel.
     //      It receives a single argument; either the entered text (if OK was chosen) or null (if Cancel
     //      was chosen).
-    ui.prompt = function (title, text, defaultInputText, callback) {
+    ui.prompt = function (title, text, defaultInputText, callback, language) {
 
         // These variables need to be declared at this level since they are used
         // in multiple functions.
         var dialog;         // The dialog box.
         var input;         // The text box where you enter the hyperlink.
+        var button_text = translations[language].button_text;
 
 
         if (defaultInputText === undefined) {
@@ -1125,14 +1135,14 @@
             okButton.className = "btn btn-primary";
             okButton.type = "button";
             okButton.onclick = function () { return close(false); };
-            okButton.innerHTML = "OK";
+            okButton.innerHTML = button_text.ok;
 
             // The cancel button
             var cancelButton = doc.createElement("button");
             cancelButton.className = "btn btn-primary";
             cancelButton.type = "button";
             cancelButton.onclick = function () { return close(true); };
-            cancelButton.innerHTML = "Cancel";
+            cancelButton.innerHTML = button_text.cancel;
 
             footer.appendChild(okButton);
             footer.appendChild(cancelButton);
@@ -1399,37 +1409,37 @@
             }
 
             group1 = makeGroup(1);
-            local_tooltips = tooltips[language];
-            buttons.bold = makeButton("wmd-bold-button", local_tooltips.bold, "icon-bold", bindCommand("doBold"), group1);
-            buttons.italic = makeButton("wmd-italic-button", local_tooltips.italic, "icon-italic", bindCommand("doItalic"), group1);
+            tooltips = translations[language].tooltips;
+            buttons.bold = makeButton("wmd-bold-button", tooltips.bold, "icon-bold", bindCommand("doBold"), group1);
+            buttons.italic = makeButton("wmd-italic-button", tooltips.italic, "icon-italic", bindCommand("doItalic"), group1);
             
             group2 = makeGroup(2);
-            buttons.link = makeButton("wmd-link-button", local_tooltips.link, "icon-link", bindCommand(function (chunk, postProcessing) {
-                return this.doLinkOrImage(chunk, postProcessing, false);
+            buttons.link = makeButton("wmd-link-button", tooltips.link, "icon-link", bindCommand(function (chunk, postProcessing) {
+                return this.doLinkOrImage(chunk, postProcessing, false, language);
             }), group2);
-            buttons.quote = makeButton("wmd-quote-button", local_tooltips.quote, "icon-blockquote", bindCommand("doBlockquote"), group2);
-            buttons.code = makeButton("wmd-code-button", local_tooltips.code, "icon-code", bindCommand("doCode"), group2);
-            buttons.image = makeButton("wmd-image-button", local_tooltips.image, "icon-picture", bindCommand(function (chunk, postProcessing) {
-                return this.doLinkOrImage(chunk, postProcessing, true);
+            buttons.quote = makeButton("wmd-quote-button", tooltips.quote, "icon-blockquote", bindCommand("doBlockquote"), group2);
+            buttons.code = makeButton("wmd-code-button", tooltips.code, "icon-code", bindCommand("doCode"), group2);
+            buttons.image = makeButton("wmd-image-button", tooltips.image, "icon-picture", bindCommand(function (chunk, postProcessing) {
+                return this.doLinkOrImage(chunk, postProcessing, true, language);
             }), group2);
 
             group3 = makeGroup(3);
-            buttons.olist = makeButton("wmd-olist-button", local_tooltips.olist, "icon-list", bindCommand(function (chunk, postProcessing) {
+            buttons.olist = makeButton("wmd-olist-button", tooltips.olist, "icon-list", bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, true);
             }), group3);
-            buttons.ulist = makeButton("wmd-ulist-button", local_tooltips.ulist, "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
+            buttons.ulist = makeButton("wmd-ulist-button", tooltips.ulist, "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
                 this.doList(chunk, postProcessing, false);
             }), group3);
-            buttons.heading = makeButton("wmd-heading-button", local_tooltips.heading, "icon-header", bindCommand("doHeading"), group3);
-            buttons.hr = makeButton("wmd-hr-button", local_tooltips.hr, "icon-hr-line", bindCommand("doHorizontalRule"), group3);
+            buttons.heading = makeButton("wmd-heading-button", tooltips.heading, "icon-header", bindCommand("doHeading"), group3);
+            buttons.hr = makeButton("wmd-hr-button", tooltips.hr, "icon-hr-line", bindCommand("doHorizontalRule"), group3);
             
             group4 = makeGroup(4);
-            buttons.undo = makeButton("wmd-undo-button", local_tooltips.undo, "icon-undo", null, group4);
+            buttons.undo = makeButton("wmd-undo-button", tooltips.undo, "icon-undo", null, group4);
             buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
 
             var redoTitle = /win/.test(nav.platform.toLowerCase()) ?
-                local_tooltips.redo_pc :
-                local_tooltips.redo_mac; // mac and other non-Windows platforms
+                tooltips.redo_pc :
+                tooltips.redo_mac; // mac and other non-Windows platforms
 
             buttons.redo = makeButton("wmd-redo-button", redoTitle, "icon-share-alt", null, group4);
             buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
@@ -1644,11 +1654,12 @@
         });
     }
 
-    commandProto.doLinkOrImage = function (chunk, postProcessing, isImage) {
+    commandProto.doLinkOrImage = function (chunk, postProcessing, isImage, language) {
 
         chunk.trimWhitespace();
         chunk.findTags(/\s*!?\[/, /\][ ]?(?:\n[ ]*)?(\[.*?\])?/);
         var background;
+        var dialog_text = translations[language].dialog_text;
 
         if (chunk.endTag.length > 1 && chunk.startTag.length > 0) {
 
@@ -1703,23 +1714,22 @@
 
                     if (!chunk.selection) {
                         if (isImage) {
-                            chunk.selection = "enter image description here";
+                            chunk.selection = dialog_text.image_description;
                         }
                         else {
-                            chunk.selection = "enter link description here";
+                            chunk.selection = dialog_text.link_description;
                         }
                     }
                 }
                 postProcessing();
             };
 
-
             if (isImage) {
                 if (!this.hooks.insertImageDialog(linkEnteredCallback))
-                    ui.prompt('Insert Image', imageDialogText, imageDefaultText, linkEnteredCallback);
+                    ui.prompt(dialog_text.image_title, dialog_text.image_example, imageDefaultText, linkEnteredCallback, language);
             }
             else {
-                ui.prompt('Insert Link', linkDialogText, linkDefaultText, linkEnteredCallback);
+                ui.prompt(dialog_text.link_title, dialog_text.link_example, linkDefaultText, linkEnteredCallback, language);
             }
             return true;
         }
