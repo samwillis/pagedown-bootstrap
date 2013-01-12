@@ -1,9 +1,9 @@
-PageDown-Bootstrap
-==================
+PageDown-Bootstrap-i18n
+=======================
 
 This is a fork of https://github.com/samwillis/pagedown-bootstrap to add i18n support
 
-Currently the tooltips on editor toolbar are supporting i18n, just simply add a file similar to i18n/Markdown.i18n.zh_CN.js
+Currently the tooltips on editor toolbar and all the content on image/link insertion modal are supporting i18n, just simply add a file similar to i18n/Markdown.i18n.zh_CN.js
 , it should work fine.
 
 The solution of adding i18n support is inspired by https://github.com/eternicode/bootstrap-datepicker, :)
