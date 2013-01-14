@@ -120,7 +120,7 @@
             var tr = ['<tr>']
             for (j=0; j<arr.length; j++){
                 var path = imgPath + arr[j];
-                var td=['<td><img src=',path,'/></td>']
+                var td=['<td><img src="',path,'"/></td>']
                 tr.push(td.join(''));
             }
             tr.push('</tr>')
