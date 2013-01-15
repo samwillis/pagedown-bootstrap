@@ -2,6 +2,7 @@ PageDown-Bootstrap-i18n
 =======================
 
 > This is a fork of https://github.com/samwillis/pagedown-bootstrap to add i18n support
+
 This is a fork of https://github.com/johnnyZhao/pagedown-bootstrap-i18n to add emotions support
 
 You have to call Markdown.SupportEmotions(imgPath,emotions) before constructing your
