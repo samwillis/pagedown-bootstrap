@@ -68,14 +68,21 @@
         en: {
             tooltips: {
                 bold: 'Bold - Ctrl+B',
+                bold_insertion: 'strong text',
                 italic: 'Italic - Ctrl+I',
-                link: 'Link - Ctrl+L',
+                italic_insertion: 'emphasized text', 
                 quote: 'Blockquote - Ctrl+Q',
+                quote_insertion: 'Blockquote',
                 code: 'Code Sample - Ctrl+K',
-                image: 'Image - Ctrl+G',
+                code_insertion: 'enter code here',
                 olist: 'Numbered List - Ctrl+O',
+                olist_insertion: 'List item',
                 ulist: 'Bulleted List - Ctrl+U',
+                ulist_insertion: 'List item',
                 heading: 'Heading - Ctrl+H',
+                heading_insertion: 'Heading',
+                link: 'Link - Ctrl+L',
+                image: 'Image - Ctrl+G',
                 hr: 'Horizontal Rule - Ctrl+R',
                 undo: 'Undo - Ctrl+Z',
                 redo_pc: 'Redo - Ctrl+Y',
@@ -1501,9 +1508,13 @@
             }
 
             group1 = makeGroup(1);
-            tooltips = translations[language].tooltips;
-            buttons.bold = makeButton("wmd-bold-button", tooltips.bold, "icon-bold", bindCommand("doBold"), group1);
-            buttons.italic = makeButton("wmd-italic-button", tooltips.italic, "icon-italic", bindCommand("doItalic"), group1);
+            var tooltips = translations[language].tooltips;
+            buttons.bold = makeButton("wmd-bold-button", tooltips.bold, "icon-bold", bindCommand(function (chunk, postProcessing, language) {
+        return this.doBorI(chunk, postProcessing, 2, tooltips.bold_insertion);
+    }), group1);
+            buttons.italic = makeButton("wmd-italic-button", tooltips.italic, "icon-italic", bindCommand(function (chunk, postProcessing) {
+        return this.doBorI(chunk, postProcessing, 1, tooltips.italic_insertion);
+    }), group1);
             
             group2 = makeGroup(2);
             buttons.link = makeButton("wmd-link-button", tooltips.link, "icon-link", bindCommand(function (chunk, postProcessing) {
@@ -1602,13 +1613,7 @@
         chunk.selection = chunk.selection.replace(/\s+$/, "");
     };
 
-    commandProto.doBold = function (chunk, postProcessing) {
-        return this.doBorI(chunk, postProcessing, 2, "strong text");
-    };
-
-    commandProto.doItalic = function (chunk, postProcessing) {
-        return this.doBorI(chunk, postProcessing, 1, "emphasized text");
-    };
+    commandProto.doItalic = 
 
     // chunk: The selected region that will be enclosed with */**
     // nStars: 1 for italics, 2 for bold
