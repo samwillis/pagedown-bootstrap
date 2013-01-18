@@ -22,13 +22,14 @@
       <script src="//html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
 
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="../../jquery.min.js"></script>
     <script src="bootstrap/js/bootstrap-transition.js"></script>
     <script src="bootstrap/js/bootstrap-modal.js"></script>
     <script src="bootstrap/js/bootstrap-tooltip.js"></script>
     <script type="text/javascript" src="../../Markdown.Converter.js"></script>
     <script type="text/javascript" src="../../Markdown.Sanitizer.js"></script>
     <script type="text/javascript" src="../../Markdown.Editor.js"></script>
+    <script type="text/javascript" src="../../i18n/Markdown.i18n.zh_cn.js"></script>
 
 </head>
 <body>
@@ -81,6 +82,7 @@ Just plain **Markdown**, except that the input is sanitized:
 <textarea class="wmd-input" id="wmd-input-second">
 This is the *second* editor.
 ------------------------------
+It was created after Markdown.SupportEmotions ![](/img/icon_idea.gif)
 
 It has a plugin hook registered that surrounds all words starting with the
 letter A with asterisks before doing the Markdown conversion. Another one gives bare links
@@ -104,7 +106,17 @@ It also includes a help button.
             var converter1 = Markdown.getSanitizingConverter();
             var editor1 = new Markdown.Editor(converter1);
             editor1.run();
-            
+
+            var imgPath = '/img/';
+            var emotions = [['cool', 'arrow', 'biggrin', 'confused', 'cry', 'eek','neutral'],
+                            ['evil', 'exclaim', 'idea', 'lol', 'mad', 'mrgreen','question'],
+                            ['razz', 'redface', 'rolleyes', 'sad','smile','surprised', 'twisted'],
+                            ['wink']]
+            for (var i=0;i<emotions.length; i++)
+                for (j=0;j<emotions[i].length; j++)
+                    emotions[i][j] = 'icon_' + emotions[i][j] + '.gif'
+                                               
+            Markdown.SupportEmotions(imgPath,emotions);
             var converter2 = new Markdown.Converter();
 
             converter2.hooks.chain("preConversion", function (text) {
@@ -117,7 +129,7 @@ It also includes a help button.
             
             var help = function () { alert("Do you need help?"); }
             
-            var editor2 = new Markdown.Editor(converter2, "-second", { handler: help });
+            var editor2 = new Markdown.Editor(converter2, "-second", { handler: help },'zh-CN');
             
             editor2.run();
         })();

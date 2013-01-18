@@ -79,7 +79,8 @@
                 hr: 'Horizontal Rule - Ctrl+R',
                 undo: 'Undo - Ctrl+Z',
                 redo_pc: 'Redo - Ctrl+Y',
-                redo_mac: 'Redo - Ctrl+Shift+Z' 
+                redo_mac: 'Redo - Ctrl+Shift+Z',
+                emotions: 'Emotions - Ctrl+E'
             },
             dialog_text: {
                 link_title: "Insert Link",
@@ -96,6 +97,39 @@
         }
     }; 
 
+    // call this function before construct Editor if you want your editor to support emotions
+    /* 
+       imgPath:
+           '/static/img/'  
+
+       emotions:
+           [['cool.gif', 'arrow.gif', 'biggrin.gif', 'confused.gif', 'cry.gif', 'eek.gif','neutral.gif'],
+           ['evil.gif', 'exclaim.gif', 'idea.gif', 'lol.gif', 'mad.gif', 'mrgreen.gif','question.gif'],
+           ['razz.gif', 'redface.gif', 'rolleyes.gif', 'sad.gif','smile.gif','surprised.gif', 'twisted.gif'],
+           ['wink.gif']]
+    */
+
+    Markdown.SupportEmotions = function(imgPath,emotions){
+        var imgPath = imgPath || '/static/img/';
+        if (typeof emotions == 'undefined')
+            return;
+
+        emotionsTableBody = ['<tbody>'];
+        for (var i=0,len=emotions.length; i<len; i++){
+            var arr = emotions[i];
+            var tr = ['<tr>']
+            for (j=0; j<arr.length; j++){
+                var path = imgPath + arr[j];
+                var td=['<td><img src="',path,'"/></td>']
+                tr.push(td.join(''));
+            }
+            tr.push('</tr>')
+            emotionsTableBody.push(tr.join(''));
+        }
+        
+        emotionsTableBody.push('</tbody>');
+        emotionsTableBody = emotionsTableBody.join('');
+    }
 
     Markdown.Editor = function (markdownConverter, idPostfix, help, language) {
 
@@ -391,6 +425,16 @@
         if (!isInner) {
             while (elem = elem.offsetParent) {
                 result += elem.offsetTop;
+            }
+        }
+        return result;
+    };
+
+    position.getLeft = function (elem, isInner) {
+        var result = elem.offsetLeft;
+        if (!isInner) {
+            while (elem = elem.offsetParent) {
+                result += elem.offsetLeft;
             }
         }
         return result;
@@ -1185,6 +1229,51 @@
         }, 0);
     };
 
+    ui.emotions = function(title,callback,pos){
+
+        var checkExist = function(){
+            var last_pos = {top:position.getTop(emotions_div),left:position.getLeft(emotions_div)}  
+            if (pos.left == last_pos.left && pos.top == last_pos.top)
+                return true;
+            return false;
+        }
+
+        var createEmotions = function(){
+            // <div class="emotions-body hide">
+            //     <table>emotions</table>
+            // </div>
+
+            // show/toggle it if you have already create it && rebind the callback 
+            if (typeof emotions_div != 'undefined'){
+                 $(emotions_table).unbind('click').click(callback);
+                 return (checkExist())?$(emotions_div).toggle():$(emotions_div).show();
+            }
+            
+            // The body
+            emotions_div = doc.createElement("div");
+            emotions_div.className = "emotions-body";
+            emotions_div.style.position = 'absolute';
+            emotions_div.style.background = 'white';
+            emotions_div.style.border = '1px solid #ddd';
+
+            emotions_table = doc.createElement("table");
+            emotions_table.className= "emotions-table";
+            $(emotions_table).html(emotionsTableBody);
+            emotions_table.style.margin = "2px";
+            
+            emotions_div.appendChild(emotions_table);
+            $(emotions_div).mouseleave(function(){emotions_div.style.display = 'none'});
+            $(emotions_table).click(callback);
+            doc.body.appendChild(emotions_div);
+        }
+
+        setTimeout(function () {
+            createEmotions();
+            $(emotions_div).css(pos);
+        }, 0);
+
+    }
+    
     function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions, language) {
         
         var inputBox = panels.input,
@@ -1235,6 +1324,9 @@
                         break;
                     case "r":
                         doClick(buttons.hr);
+                        break;
+                    case "e":
+                        doClick(buttons.emotion);
                         break;
                     case "y":
                         doClick(buttons.redo);
@@ -1333,8 +1425,8 @@
                     state.restore();
                     previewManager.refresh();
                 };
-
-                var noCleanup = button.textOp(chunks, fixupInputArea);
+                var pos = {top:position.getTop(button)+30, left:position.getLeft(button)}
+                var noCleanup = button.textOp(chunks, fixupInputArea, pos);
 
                 if (!noCleanup) {
                     fixupInputArea();
@@ -1432,6 +1524,9 @@
             }), group3);
             buttons.heading = makeButton("wmd-heading-button", tooltips.heading, "icon-header", bindCommand("doHeading"), group3);
             buttons.hr = makeButton("wmd-hr-button", tooltips.hr, "icon-hr-line", bindCommand("doHorizontalRule"), group3);
+            // add emotion button if emotionsTablyBody defined
+            if (typeof emotionsTableBody != 'undefined')
+                buttons.emotion = makeButton("wmd-emotion-button",tooltips.emotions,"icon-th",bindCommand("doEmotion"), group3)
             
             group4 = makeGroup(4);
             buttons.undo = makeButton("wmd-undo-button", tooltips.undo, "icon-undo", null, group4);
@@ -2157,5 +2252,15 @@
         chunk.skipLines(2, 1, true);
     }
 
+    commandProto.doEmotion = function(chunk, postProcessing,pos){
+        var tdClickCallback = function(e){
+            var value= e.target.getAttribute('src');
+            var mark = '![]('+value+')';
+            chunk.startTag=mark;
+            postProcessing();
+            return false;
+        }
 
+        ui.emotions("Emotions",tdClickCallback,pos);
+    }
 })();

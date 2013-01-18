@@ -13,7 +13,8 @@
             hr: '水平分割线 - Ctrl+R',
             undo: '撤销 - Ctrl+Z',
             redo_pc: '重做 - Ctrl+Y',
-            redo_mac: '重做 - Ctrl+Shift+Z' 
+            redo_mac: '重做 - Ctrl+Shift+Z' ,
+            emotions: '表情 - Ctrl+E'
         },
         dialog_text: {
             link_title: "插入链接",
