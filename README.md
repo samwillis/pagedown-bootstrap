@@ -1,4 +1,4 @@
-PageDown-with-emotions
+PageDown-bootstrap with i18n and emotion support
 =======================
 
 > This is a fork of https://github.com/samwillis/pagedown-bootstrap to add i18n and emotions support
