@@ -1007,7 +1007,7 @@
             else {
                 // Fixes common pasting errors.
                 text = text.replace(/^http:\/\/(https?|ftp):\/\//, '$1://');
-                if (!/^(?:https?|ftp):\/\//.test(text))
+                if (!/^(?:https?:\/\/|ftp:\/\/|mailto:)/.test(text))
                     text = 'http://' + text;
             }
 
