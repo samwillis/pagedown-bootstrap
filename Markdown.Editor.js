@@ -25,11 +25,6 @@
     // this area.
     // -------------------------------------------------------------------
 
-    // The text that appears on the upper part of the dialog box when
-    // entering links.
-    var linkDialogText = "<p>http://example.com/ \"optional title\"</p>";
-    var imageDialogText = "<p>http://example.com/images/diagram.jpg \"optional title\"</p>";
-
     // The default text that appears in the dialog input box when entering
     // links.
     var imageDefaultText = "http://";
@@ -49,10 +44,105 @@
     // - getConverter() returns the markdown converter object that was passed to the constructor
     // - run() actually starts the editor; should be called after all necessary plugins are registered. Calling this more than once is a no-op.
     // - refreshPreview() forces the preview to be updated. This method is only available after run() was called.
-    Markdown.Editor = function (markdownConverter, idPostfix, help) {
+    $.fn.markdown_editor = function ( option ) {
+        var args = Array.apply(null, arguments);
+        args.shift();
+        return this.each(function () {
+            var $this = $(this),
+            data = $this.data('datepicker'),
+            options = typeof option == 'object' && option;
+            if (!data) {
+                $this.data('datepicker', (data = new Datepicker(this, $.extend({}, $.fn.datepicker.defaults,options))));
+            }
+            if (typeof option == 'string' && typeof data[option] == 'function') {
+                data[option].apply(data, args);
+            }
+        });
+    };
+    $.fn.markdown_editor.defaults = {
+    };
+
+    $.fn.markdown_editor.Constructor = Markdown.Editor;
+
+    var translations = $.fn.markdown_editor.translations = {
+        en: {
+            tooltips: {
+                bold: 'Bold - Ctrl+B',
+                bold_insertion: 'strong text',
+                italic: 'Italic - Ctrl+I',
+                italic_insertion: 'emphasized text', 
+                quote: 'Blockquote - Ctrl+Q',
+                quote_insertion: 'Blockquote',
+                code: 'Code Sample - Ctrl+K',
+                code_insertion: 'enter code here',
+                olist: 'Numbered List - Ctrl+O',
+                olist_insertion: 'List item',
+                ulist: 'Bulleted List - Ctrl+U',
+                ulist_insertion: 'List item',
+                heading: 'Heading - Ctrl+H',
+                heading_insertion: 'Heading',
+                link: 'Link - Ctrl+L',
+                image: 'Image - Ctrl+G',
+                hr: 'Horizontal Rule - Ctrl+R',
+                undo: 'Undo - Ctrl+Z',
+                redo_pc: 'Redo - Ctrl+Y',
+                redo_mac: 'Redo - Ctrl+Shift+Z',
+                emotions: 'Emotions - Ctrl+E'
+            },
+            dialog_text: {
+                link_title: "Insert Link",
+                link_example: "<p>http://example.com/ \"optional title\"</p>",
+                link_description: "enter link description here" ,
+                image_title: "Insert Image",
+                image_example: "<p>http://example.com/images/diagram.jpg \"optional title\"</p>",
+                image_description: "enter image description here" ,
+            },
+            button_text: {
+                ok: "OK",
+                cancel: "Cancel"
+            }
+        }
+    }; 
+
+    // call this function before construct Editor if you want your editor to support emotions
+    /* 
+       imgPath:
+           '/static/img/'  
+
+       emotions:
+           [['cool.gif', 'arrow.gif', 'biggrin.gif', 'confused.gif', 'cry.gif', 'eek.gif','neutral.gif'],
+           ['evil.gif', 'exclaim.gif', 'idea.gif', 'lol.gif', 'mad.gif', 'mrgreen.gif','question.gif'],
+           ['razz.gif', 'redface.gif', 'rolleyes.gif', 'sad.gif','smile.gif','surprised.gif', 'twisted.gif'],
+           ['wink.gif']]
+    */
+
+    Markdown.SupportEmotions = function(imgPath,emotions){
+        var imgPath = imgPath || '/static/img/';
+        if (typeof emotions == 'undefined')
+            return;
+
+        emotionsTableBody = ['<tbody>'];
+        for (var i=0,len=emotions.length; i<len; i++){
+            var arr = emotions[i];
+            var tr = ['<tr>']
+            for (j=0; j<arr.length; j++){
+                var path = imgPath + arr[j];
+                var td=['<td><img src="',path,'"/></td>']
+                tr.push(td.join(''));
+            }
+            tr.push('</tr>')
+            emotionsTableBody.push(tr.join(''));
+        }
+        
+        emotionsTableBody.push('</tbody>');
+        emotionsTableBody = emotionsTableBody.join('');
+    }
+
+    Markdown.Editor = function (markdownConverter, idPostfix, help, language) {
 
         idPostfix = idPostfix || "";
-
+        this.language = language != undefined ? language : "en";
+        this.language = this.language in translations ? this.language : "en";
         var hooks = this.hooks = new Markdown.HookCollection();
         hooks.addNoop("onPreviewRefresh");       // called with no arguments after the preview has been refreshed
         hooks.addNoop("postBlockquoteCreation"); // called with the user's selection *after* the blockquote was created; should return the actual to-be-inserted text
@@ -88,7 +178,7 @@
                 }
             }
 
-            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help);
+            uiManager = new UIManager(idPostfix, panels, undoManager, previewManager, commandManager, help, this.language);
             uiManager.setUndoRedoButtonStates();
 
             var forceRefresh = that.refreshPreview = function () { previewManager.refresh(true); };
@@ -342,6 +432,16 @@
         if (!isInner) {
             while (elem = elem.offsetParent) {
                 result += elem.offsetTop;
+            }
+        }
+        return result;
+    };
+
+    position.getLeft = function (elem, isInner) {
+        var result = elem.offsetLeft;
+        if (!isInner) {
+            while (elem = elem.offsetParent) {
+                result += elem.offsetLeft;
             }
         }
         return result;
@@ -973,12 +1073,13 @@
     // callback: The function which is executed when the prompt is dismissed, either via OK or Cancel.
     //      It receives a single argument; either the entered text (if OK was chosen) or null (if Cancel
     //      was chosen).
-    ui.prompt = function (title, text, defaultInputText, callback) {
+    ui.prompt = function (title, text, defaultInputText, callback, language) {
 
         // These variables need to be declared at this level since they are used
         // in multiple functions.
         var dialog;         // The dialog box.
         var input;         // The text box where you enter the hyperlink.
+        var button_text = translations[language].button_text;
 
 
         if (defaultInputText === undefined) {
@@ -1085,14 +1186,14 @@
             okButton.className = "btn btn-primary";
             okButton.type = "button";
             okButton.onclick = function () { return close(false); };
-            okButton.innerHTML = "OK";
+            okButton.innerHTML = button_text.ok;
 
             // The cancel button
             var cancelButton = doc.createElement("button");
             cancelButton.className = "btn btn-primary";
             cancelButton.type = "button";
             cancelButton.onclick = function () { return close(true); };
-            cancelButton.innerHTML = "Cancel";
+            cancelButton.innerHTML = button_text.cancel;
 
             footer.appendChild(okButton);
             footer.appendChild(cancelButton);
@@ -1135,8 +1236,53 @@
         }, 0);
     };
 
-    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions) {
+    ui.emotions = function(title,callback,pos){
 
+        var checkExist = function(){
+            var last_pos = {top:position.getTop(emotions_div),left:position.getLeft(emotions_div)}  
+            if (pos.left == last_pos.left && pos.top == last_pos.top)
+                return true;
+            return false;
+        }
+
+        var createEmotions = function(){
+            // <div class="emotions-body hide">
+            //     <table>emotions</table>
+            // </div>
+
+            // show/toggle it if you have already create it && rebind the callback 
+            if (typeof emotions_div != 'undefined'){
+                 $(emotions_table).unbind('click').click(callback);
+                 return (checkExist())?$(emotions_div).toggle():$(emotions_div).show();
+            }
+            
+            // The body
+            emotions_div = doc.createElement("div");
+            emotions_div.className = "emotions-body";
+            emotions_div.style.position = 'absolute';
+            emotions_div.style.background = 'white';
+            emotions_div.style.border = '1px solid #ddd';
+
+            emotions_table = doc.createElement("table");
+            emotions_table.className= "emotions-table";
+            $(emotions_table).html(emotionsTableBody);
+            emotions_table.style.margin = "2px";
+            
+            emotions_div.appendChild(emotions_table);
+            $(emotions_div).mouseleave(function(){emotions_div.style.display = 'none'});
+            $(emotions_table).click(callback);
+            doc.body.appendChild(emotions_div);
+        }
+
+        setTimeout(function () {
+            createEmotions();
+            $(emotions_div).css(pos);
+        }, 0);
+
+    }
+    
+    function UIManager(postfix, panels, undoManager, previewManager, commandManager, helpOptions, language) {
+        
         var inputBox = panels.input,
             buttons = {}; // buttons.undo, buttons.link, etc. The actual DOM elements.
 
@@ -1185,6 +1331,9 @@
                         break;
                     case "r":
                         doClick(buttons.hr);
+                        break;
+                    case "e":
+                        doClick(buttons.emotion);
                         break;
                     case "y":
                         doClick(buttons.redo);
@@ -1283,8 +1432,8 @@
                     state.restore();
                     previewManager.refresh();
                 };
-
-                var noCleanup = button.textOp(chunks, fixupInputArea);
+                var pos = {top:position.getTop(button)+30, left:position.getLeft(button)}
+                var noCleanup = button.textOp(chunks, fixupInputArea, pos);
 
                 if (!noCleanup) {
                     fixupInputArea();
@@ -1359,36 +1508,50 @@
             }
 
             group1 = makeGroup(1);
-            buttons.bold = makeButton("wmd-bold-button", "Bold - Ctrl+B", "icon-bold", bindCommand("doBold"), group1);
-            buttons.italic = makeButton("wmd-italic-button", "Italic - Ctrl+I", "icon-italic", bindCommand("doItalic"), group1);
+            var tooltips = translations[language].tooltips;
+            buttons.bold = makeButton("wmd-bold-button", tooltips.bold, "icon-bold", bindCommand(function (chunk, postProcessing, language) {
+        return this.doBorI(chunk, postProcessing, 2, tooltips.bold_insertion);
+    }), group1);
+            buttons.italic = makeButton("wmd-italic-button", tooltips.italic, "icon-italic", bindCommand(function (chunk, postProcessing) {
+        return this.doBorI(chunk, postProcessing, 1, tooltips.italic_insertion);
+    }), group1);
             
             group2 = makeGroup(2);
-            buttons.link = makeButton("wmd-link-button", "Link - Ctrl+L", "icon-link", bindCommand(function (chunk, postProcessing) {
-                return this.doLinkOrImage(chunk, postProcessing, false);
+            buttons.link = makeButton("wmd-link-button", tooltips.link, "icon-link", bindCommand(function (chunk, postProcessing) {
+                return this.doLinkOrImage(chunk, postProcessing, false, language);
             }), group2);
-            buttons.quote = makeButton("wmd-quote-button", "Blockquote - Ctrl+Q", "icon-blockquote", bindCommand("doBlockquote"), group2);
-            buttons.code = makeButton("wmd-code-button", "Code Sample - Ctrl+K", "icon-code", bindCommand("doCode"), group2);
-            buttons.image = makeButton("wmd-image-button", "Image - Ctrl+G", "icon-picture", bindCommand(function (chunk, postProcessing) {
-                return this.doLinkOrImage(chunk, postProcessing, true);
+            buttons.quote = makeButton("wmd-quote-button", tooltips.quote, "icon-blockquote", bindCommand(function (chunk, postProcessing) {
+				return this.doBlockquote(chunk, postProcessing, tooltips.quote_insertion)
+			}), group2);
+            buttons.code = makeButton("wmd-code-button", tooltips.code, "icon-code", bindCommand(function (chunk, postProcessing) {
+				return this.doCode(chunk, postProcessing, tooltips.code_insertion)
+			}), group2);
+            buttons.image = makeButton("wmd-image-button", tooltips.image, "icon-picture", bindCommand(function (chunk, postProcessing) {
+                return this.doLinkOrImage(chunk, postProcessing, true, language);
             }), group2);
 
             group3 = makeGroup(3);
-            buttons.olist = makeButton("wmd-olist-button", "Numbered List - Ctrl+O", "icon-list", bindCommand(function (chunk, postProcessing) {
-                this.doList(chunk, postProcessing, true);
+            buttons.olist = makeButton("wmd-olist-button", tooltips.olist, "icon-list", bindCommand(function (chunk, postProcessing) {
+                this.doList(chunk, postProcessing, true, tooltips.olist_insertion);
             }), group3);
-            buttons.ulist = makeButton("wmd-ulist-button", "Bulleted List - Ctrl+U", "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
-                this.doList(chunk, postProcessing, false);
+            buttons.ulist = makeButton("wmd-ulist-button", tooltips.ulist, "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
+                this.doList(chunk, postProcessing, false, tooltips.ulist_insertion);
             }), group3);
-            buttons.heading = makeButton("wmd-heading-button", "Heading - Ctrl+H", "icon-header", bindCommand("doHeading"), group3);
-            buttons.hr = makeButton("wmd-hr-button", "Horizontal Rule - Ctrl+R", "icon-hr-line", bindCommand("doHorizontalRule"), group3);
+            buttons.heading = makeButton("wmd-heading-button", tooltips.heading, "icon-header", bindCommand(function(chunk, postProcessing) {
+				this.doHeading(chunk, postProcessing, tooltips.heading_insertion);
+			}),  group3)
+            buttons.hr = makeButton("wmd-hr-button", tooltips.hr, "icon-hr-line", bindCommand("doHorizontalRule"), group3);
+            // add emotion button if emotionsTablyBody defined
+            if (typeof emotionsTableBody != 'undefined')
+                buttons.emotion = makeButton("wmd-emotion-button",tooltips.emotions,"icon-th",bindCommand("doEmotion"), group3)
             
             group4 = makeGroup(4);
-            buttons.undo = makeButton("wmd-undo-button", "Undo - Ctrl+Z", "icon-undo", null, group4);
+            buttons.undo = makeButton("wmd-undo-button", tooltips.undo, "icon-undo", null, group4);
             buttons.undo.execute = function (manager) { if (manager) manager.undo(); };
 
             var redoTitle = /win/.test(nav.platform.toLowerCase()) ?
-                "Redo - Ctrl+Y" :
-                "Redo - Ctrl+Shift+Z"; // mac and other non-Windows platforms
+                tooltips.redo_pc :
+                tooltips.redo_mac; // mac and other non-Windows platforms
 
             buttons.redo = makeButton("wmd-redo-button", redoTitle, "icon-share-alt", null, group4);
             buttons.redo.execute = function (manager) { if (manager) manager.redo(); };
@@ -1456,13 +1619,7 @@
         chunk.selection = chunk.selection.replace(/\s+$/, "");
     };
 
-    commandProto.doBold = function (chunk, postProcessing) {
-        return this.doBorI(chunk, postProcessing, 2, "strong text");
-    };
-
-    commandProto.doItalic = function (chunk, postProcessing) {
-        return this.doBorI(chunk, postProcessing, 1, "emphasized text");
-    };
+    commandProto.doItalic = 
 
     // chunk: The selected region that will be enclosed with */**
     // nStars: 1 for italics, 2 for bold
@@ -1603,11 +1760,12 @@
         });
     }
 
-    commandProto.doLinkOrImage = function (chunk, postProcessing, isImage) {
+    commandProto.doLinkOrImage = function (chunk, postProcessing, isImage, language) {
 
         chunk.trimWhitespace();
         chunk.findTags(/\s*!?\[/, /\][ ]?(?:\n[ ]*)?(\[.*?\])?/);
         var background;
+        var dialog_text = translations[language].dialog_text;
 
         if (chunk.endTag.length > 1 && chunk.startTag.length > 0) {
 
@@ -1662,23 +1820,22 @@
 
                     if (!chunk.selection) {
                         if (isImage) {
-                            chunk.selection = "enter image description here";
+                            chunk.selection = dialog_text.image_description;
                         }
                         else {
-                            chunk.selection = "enter link description here";
+                            chunk.selection = dialog_text.link_description;
                         }
                     }
                 }
                 postProcessing();
             };
 
-
             if (isImage) {
                 if (!this.hooks.insertImageDialog(linkEnteredCallback))
-                    ui.prompt('Insert Image', imageDialogText, imageDefaultText, linkEnteredCallback);
+                    ui.prompt(dialog_text.image_title, dialog_text.image_example, imageDefaultText, linkEnteredCallback, language);
             }
             else {
-                ui.prompt('Insert Link', linkDialogText, linkDefaultText, linkEnteredCallback);
+                ui.prompt(dialog_text.link_title, dialog_text.link_example, linkDefaultText, linkEnteredCallback, language);
             }
             return true;
         }
@@ -1729,7 +1886,7 @@
         }
     };
 
-    commandProto.doBlockquote = function (chunk, postProcessing) {
+    commandProto.doBlockquote = function (chunk, postProcessing, default_insertion) {
 
         chunk.selection = chunk.selection.replace(/^(\n*)([^\r]+?)(\n*)$/,
             function (totalMatch, newlinesBefore, text, newlinesAfter) {
@@ -1745,7 +1902,7 @@
             });
 
         chunk.selection = chunk.selection.replace(/^(\s|>)+$/, "");
-        chunk.selection = chunk.selection || "Blockquote";
+        chunk.selection = chunk.selection || default_insertion;
 
         // The original code uses a regular expression to find out how much of the
         // text *directly before* the selection already was a blockquote:
@@ -1873,8 +2030,7 @@
         }
     };
 
-    commandProto.doCode = function (chunk, postProcessing) {
-
+    commandProto.doCode = function (chunk, postProcessing, default_insertion) {
         var hasTextBefore = /\S[ ]*$/.test(chunk.before);
         var hasTextAfter = /^[ ]*\S/.test(chunk.after);
 
@@ -1902,7 +2058,7 @@
 
             if (!chunk.selection) {
                 chunk.startTag = "    ";
-                chunk.selection = "enter code here";
+                chunk.selection = default_insertion;
             }
             else {
                 if (/^[ ]{0,3}\S/m.test(chunk.selection)) {
@@ -1938,7 +2094,7 @@
         }
     };
 
-    commandProto.doList = function (chunk, postProcessing, isNumberedList) {
+    commandProto.doList = function (chunk, postProcessing, isNumberedList, default_insertion) {
 
         // These are identical except at the very beginning and end.
         // Should probably use the regex extension function to make this clearer.
@@ -2019,7 +2175,7 @@
             });
 
         if (!chunk.selection) {
-            chunk.selection = "List item";
+            chunk.selection = default_insertion;
         }
 
         var prefix = getItemPrefix();
@@ -2041,7 +2197,7 @@
 
     };
 
-    commandProto.doHeading = function (chunk, postProcessing) {
+    commandProto.doHeading = function (chunk, postProcessing, default_heading) {
 
         // Remove leading/trailing whitespace and reduce internal spaces to single spaces.
         chunk.selection = chunk.selection.replace(/\s+/g, " ");
@@ -2051,7 +2207,7 @@
         // make a level 2 hash header around some default text.
         if (!chunk.selection) {
             chunk.startTag = "## ";
-            chunk.selection = "Heading";
+            chunk.selection = default_heading;
             chunk.endTag = " ##";
             return;
         }
@@ -2106,5 +2262,15 @@
         chunk.skipLines(2, 1, true);
     }
 
+    commandProto.doEmotion = function(chunk, postProcessing,pos){
+        var tdClickCallback = function(e){
+            var value= e.target.getAttribute('src');
+            var mark = '![]('+value+')';
+            chunk.startTag=mark;
+            postProcessing();
+            return false;
+        }
 
+        ui.emotions("Emotions",tdClickCallback,pos);
+    }
 })();
