@@ -1520,20 +1520,26 @@
             buttons.link = makeButton("wmd-link-button", tooltips.link, "icon-link", bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, false, language);
             }), group2);
-            buttons.quote = makeButton("wmd-quote-button", tooltips.quote, "icon-blockquote", bindCommand("doBlockquote"), group2);
-            buttons.code = makeButton("wmd-code-button", tooltips.code, "icon-code", bindCommand("doCode"), group2);
+            buttons.quote = makeButton("wmd-quote-button", tooltips.quote, "icon-blockquote", bindCommand(function (chunk, postProcessing) {
+				return this.doBlockquote(chunk, postProcessing, tooltips.quote_insertion)
+			}), group2);
+            buttons.code = makeButton("wmd-code-button", tooltips.code, "icon-code", bindCommand(function (chunk, postProcessing) {
+				return this.doCode(chunk, postProcessing, tooltips.code_insertion)
+			}), group2);
             buttons.image = makeButton("wmd-image-button", tooltips.image, "icon-picture", bindCommand(function (chunk, postProcessing) {
                 return this.doLinkOrImage(chunk, postProcessing, true, language);
             }), group2);
 
             group3 = makeGroup(3);
             buttons.olist = makeButton("wmd-olist-button", tooltips.olist, "icon-list", bindCommand(function (chunk, postProcessing) {
-                this.doList(chunk, postProcessing, true);
+                this.doList(chunk, postProcessing, true, tooltips.olist_insertion);
             }), group3);
             buttons.ulist = makeButton("wmd-ulist-button", tooltips.ulist, "icon-bullet-list", bindCommand(function (chunk, postProcessing) {
-                this.doList(chunk, postProcessing, false);
+                this.doList(chunk, postProcessing, false, tooltips.ulist_insertion);
             }), group3);
-            buttons.heading = makeButton("wmd-heading-button", tooltips.heading, "icon-header", bindCommand("doHeading"), group3);
+            buttons.heading = makeButton("wmd-heading-button", tooltips.heading, "icon-header", bindCommand(function(chunk, postProcessing) {
+				this.doHeading(chunk, postProcessing, tooltips.heading_insertion);
+			}),  group3)
             buttons.hr = makeButton("wmd-hr-button", tooltips.hr, "icon-hr-line", bindCommand("doHorizontalRule"), group3);
             // add emotion button if emotionsTablyBody defined
             if (typeof emotionsTableBody != 'undefined')
@@ -1880,7 +1886,7 @@
         }
     };
 
-    commandProto.doBlockquote = function (chunk, postProcessing) {
+    commandProto.doBlockquote = function (chunk, postProcessing, default_insertion) {
 
         chunk.selection = chunk.selection.replace(/^(\n*)([^\r]+?)(\n*)$/,
             function (totalMatch, newlinesBefore, text, newlinesAfter) {
@@ -1896,7 +1902,7 @@
             });
 
         chunk.selection = chunk.selection.replace(/^(\s|>)+$/, "");
-        chunk.selection = chunk.selection || "Blockquote";
+        chunk.selection = chunk.selection || default_insertion;
 
         // The original code uses a regular expression to find out how much of the
         // text *directly before* the selection already was a blockquote:
@@ -2024,8 +2030,7 @@
         }
     };
 
-    commandProto.doCode = function (chunk, postProcessing) {
-
+    commandProto.doCode = function (chunk, postProcessing, default_insertion) {
         var hasTextBefore = /\S[ ]*$/.test(chunk.before);
         var hasTextAfter = /^[ ]*\S/.test(chunk.after);
 
@@ -2053,7 +2058,7 @@
 
             if (!chunk.selection) {
                 chunk.startTag = "    ";
-                chunk.selection = "enter code here";
+                chunk.selection = default_insertion;
             }
             else {
                 if (/^[ ]{0,3}\S/m.test(chunk.selection)) {
@@ -2089,7 +2094,7 @@
         }
     };
 
-    commandProto.doList = function (chunk, postProcessing, isNumberedList) {
+    commandProto.doList = function (chunk, postProcessing, isNumberedList, default_insertion) {
 
         // These are identical except at the very beginning and end.
         // Should probably use the regex extension function to make this clearer.
@@ -2170,7 +2175,7 @@
             });
 
         if (!chunk.selection) {
-            chunk.selection = "List item";
+            chunk.selection = default_insertion;
         }
 
         var prefix = getItemPrefix();
@@ -2192,7 +2197,7 @@
 
     };
 
-    commandProto.doHeading = function (chunk, postProcessing) {
+    commandProto.doHeading = function (chunk, postProcessing, default_heading) {
 
         // Remove leading/trailing whitespace and reduce internal spaces to single spaces.
         chunk.selection = chunk.selection.replace(/\s+/g, " ");
@@ -2202,7 +2207,7 @@
         // make a level 2 hash header around some default text.
         if (!chunk.selection) {
             chunk.startTag = "## ";
-            chunk.selection = "Heading";
+            chunk.selection = default_heading;
             chunk.endTag = " ##";
             return;
         }
